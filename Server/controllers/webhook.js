@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import { transactionSchema } from "../models/transactionModel.js";
 import { getDB } from "../configs/db.js";
+import { ObjectId } from "mongodb";
 
 export const stripeWebhooks = async (req, res) => {
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
@@ -30,6 +31,7 @@ export const stripeWebhooks = async (req, res) => {
                     payment_intent: paymentIntent.id,
                 })
                 const session = sessionList.data[0];
+                if (!sessionList.data.length) throw new Error("No session found");
                 //Read Metadata
                 //Used to connect Stripe payment to your DB transaction.
                 const {transactionId, appId} = session.metadata;
@@ -76,6 +78,6 @@ export const stripeWebhooks = async (req, res) => {
     }
     catch (error) {
         console.error("Webhook processing error")
-        res.status(500).json({success: false, message:"Internal Server Error"})
+        res.status(500).json({success: false, message: error.message})
     }
 }
