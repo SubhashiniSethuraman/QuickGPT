@@ -38,13 +38,30 @@ export const stripeWebhooks = async (req, res) => {
 
                 //appId in Stripe dashboard and in metadata (compare)
                 if(appId === 'quickgpt') {
-                    const transaction = await db.collection("transactions").findOne({ _id: new ObjectId(transactionId), isPaid: false })
+                    // const transaction = await db.collection("transactions").findOne({ _id: new ObjectId(transactionId), isPaid: false })
 
                     //Update credits in user account in user collection
-                    await db.collection("users").updateOne({_id: transaction.userId}, {$inc: {credits: transaction.credits}})
+                    // await db.collection("users").updateOne({_id: transaction.userId}, {$inc: {credits: transaction.credits}})
 
                     //Update credit Payment status in transaction collection
-                    await db.collection("transactions").updateOne({_id: transaction.userId},{$set: {isPaid: true,updatedAt: new Date()}})
+                    // await db.collection("transactions").updateOne({_id: transaction.userId},{$set: {isPaid: true,updatedAt: new Date()}})
+
+                    const transaction = await db.collection("transactions").findOne({
+                    _id: new ObjectId(transactionId),
+                    isPaid: false
+                    });
+
+                    if (!transaction) throw new Error("Transaction not found");
+
+                    await db.collection("users").updateOne(
+                    { _id: transaction.userId },
+                    { $inc: { credits: transaction.credits } }
+                    );
+
+                    await db.collection("transactions").updateOne(
+                    { _id: transaction._id },
+                    { $set: { isPaid: true, updatedAt: new Date() } }
+                    );
                 }
                 else {
                     return res.json({received: true, message: "Ignored event: Invalid app"})
