@@ -2,12 +2,13 @@ import React, { useEffect, useState, useRef } from 'react'
 import { useAppContext } from '../context/AppContext'
 import { assets } from '../assets/assets'
 import Message from './Message'
+import toast from 'react-hot-toast'
 
 const ChatBox = () => {
 
   const containerRef = useRef(null)
 
-  const {selectedChat, theme} = useAppContext()
+  const {selectedChat, theme, user, token, setUser} = useAppContext()
 
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(false)
@@ -16,9 +17,79 @@ const ChatBox = () => {
   const [mode, setMode] = useState("text")
   const [isPublished, setIsPublished] = useState(false)
 
-  const onSubmit = async (e) => {
-    e.preventDefault();
+  const URL = import.meta.env.VITE_SERVER_URL;
+
+ const onSubmit = async (e) => {
+  e.preventDefault();
+
+  try {
+
+    if (!user) {
+      return toast.error("Login to send message");
+    }
+
+    setLoading(true);
+
+    const promptCopy = prompt;
+
+    setPrompt("");
+
+    // Add user message instantly
+    setMessages(prev => [
+      ...prev,
+      {
+        role: "user",
+        content: prompt,
+        timestamp: Date.now(),
+        isImage: false
+      }
+    ]);
+
+    const res = await fetch(`${URL}/api/message/${mode}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        chatId: selectedChat._id,
+        prompt,
+        isPublished
+      })
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+
+      setMessages(prev => [...prev, data.reply]);
+
+      // decrease credits
+      setUser(prev => ({
+        ...prev,
+        credits:
+          mode === "image"
+            ? prev.credits - 2
+            : prev.credits - 1
+      }));
+
+    } else {
+
+      toast.error(data.message);
+
+      // restore prompt if failed
+      setPrompt(promptCopy);
+    }
+
+  } catch (error) {
+
+    toast.error(error.message);
+
+  } finally {
+
+    setLoading(false);
   }
+};
 
   useEffect(()=>{
     if(selectedChat){
@@ -31,7 +102,7 @@ const ChatBox = () => {
     if(containerRef.current){
       containerRef.current.scrollTo({
         top: containerRef.current.scrollHeight,
-        behaviour: "smooth",
+        behavior: "smooth",
       })
     }
   },[messages])

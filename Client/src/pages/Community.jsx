@@ -1,15 +1,40 @@
 import React, { useEffect, useState } from 'react'
 import { dummyPublishedImages } from '../assets/assets'
 import Loading from './Loading'
+import { useAppContext } from '../context/AppContext'
 
 const Community = () => {
 
   const [images, setImages] = useState([])
   const [loading, setLoading] =useState(true)
 
+  const {token} = useAppContext();
+  const URL = import.meta.env.VITE_SERVER_URL;
+ 
   const fetchImages = async () => {
-    setImages(dummyPublishedImages)
-    setLoading(false)
+    try{
+      const res = await fetch(`${URL}/api/user/published-images`,{
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        }
+      })
+
+      const data = await res.json()
+
+      if(res.status === 200){
+        setImages(data.images)
+      }
+      else {
+        toast.error(data.message)
+      }
+    }
+    catch (error) {
+      toast.error(error.message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {

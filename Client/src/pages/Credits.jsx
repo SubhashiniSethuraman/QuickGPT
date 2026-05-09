@@ -1,17 +1,105 @@
 import React, { useState } from 'react'
 import { dummyPlans } from '../assets/assets'
 import Loading from './Loading'
+import { useAppContext } from '../context/AppContext'
+import toast from 'react-hot-toast'
 
 const Credits = () => {
 
   const [plans, setPlans] = useState([])
   const [loading, setLoading] = useState(true)
+  const URL = import.meta.env.VITE_SERVER_URL;
+  const {token} = useAppContext();
 
   const fetchPlans = async () => {
-    setPlans(dummyPlans)
-    setLoading(false)
+    try {
+      const res = await fetch(`${URL}/api/credit/plan` ,{
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        }
+      })
+
+      const data = await res.json()
+
+      if(res.ok) {
+        setPlans(data.plans)
+      }
+      else {
+        toast.error(data.message || "Failed to fetch plans")
+      }
+    } catch (error) {
+        toast.error(error.message)
+    }
+    finally {
+      setLoading(false)
+    }
   }
 
+  // const purchasePlan = async (planId) => {
+  //   try {
+  //     const res = await fetch(`${URL}/api/credit/purchase`, {
+  //     method: "POST",
+  //     headers: {
+  //       "Content-Type": "application/json",
+  //       "Authorization": `Bearer ${token}`
+  //     },
+  //     body: planId}
+  //   )
+  //   const data = await res.json()
+
+  //   if(res.ok) {
+  //     window.location.href = data.url;
+  //   }
+  //   else {
+  //     toast.error(data.message)
+  //   }
+  //   }
+  //   catch (error) {
+  //     toast.error(error.message)
+  //   }
+  // }
+
+  const purchasePlan = async (planId) => {
+
+  const toastId = toast.loading("Loading...");
+
+  try {
+
+    const res = await fetch(`${URL}/api/credit/purchase`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({ planId })
+    });
+
+    const data = await res.json();
+
+    toast.dismiss(toastId);
+
+    if (res.ok) {
+
+      toast.success("Redirecting to payment...");
+
+      window.location.href = data.url;
+
+    } else {
+
+      toast.error(data.message);
+
+    }
+
+  } catch (error) {
+
+    toast.dismiss(toastId);
+
+    toast.error(error.message);
+
+  }
+};
   useState(() => {
     fetchPlans()
   }, [])
@@ -39,7 +127,7 @@ const Credits = () => {
                   ))}
                 </ul>
               </div>
-              <button className='mt-6 bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white
+              <button onClick={() => purchasePlan(plan._id)} className='mt-6 bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white
               font-medium py-2 rounded transiiton-colors cursor-pointer'>Buy Now</button>
           </div>
         ))}

@@ -16,6 +16,7 @@ export const registerUser = async (req, res) => {
 
     try{
 
+        console.log(req.body)
         const { error, value } = userRegisterSchema.validate(req.body);
 
         if(error) {
@@ -34,7 +35,7 @@ export const registerUser = async (req, res) => {
         const hashedPassword = await hashPassword(password);
         const user = await db.collection("users").insertOne({name, email, password: hashedPassword, credits: 20});
 
-        const token = generateToken(user._id)
+        const token = generateToken(user.insertedId)
 
         return res.json({
             success: true,
@@ -42,6 +43,7 @@ export const registerUser = async (req, res) => {
             message: "User registered successfully"
         })
     } catch(error) {
+        console.log(error?.message)
         return res.status(500).json({
             success: false,
             message: error.message
@@ -126,7 +128,8 @@ export const getPublishedImages = async(req, res) => {
                     userName: "$userName"
                 }
             }
-        ])
+        ]).toArray();
+        
         res.json({ success: true, images: publishedImageMessages.reverse()})
     }
     catch(error) {

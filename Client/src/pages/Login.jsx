@@ -1,4 +1,7 @@
 import React, {useState} from 'react'
+import { useAppContext } from '../context/AppContext';
+import toast from 'react-hot-toast'
+import { useNavigate } from 'react-router-dom'
 
 const Login = () => {
 
@@ -7,12 +10,42 @@ const Login = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
 
+    const { token, setToken } = useAppContext()
+
+    const URL = import.meta.env.VITE_SERVER_URL;
+    const navigate = useNavigate()
+
     const handleSubmit = async (e) => {
       e.preventDefault();
+      const url = state === "login" ? `${URL}/api/user/login` : `${URL}/api/user/register`;
+
+      const payload = state === "login" ? {email, password} : {name, email, password};
+      try{
+        const res = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        })
+
+        const data = await res.json();
+        if(res.status === 200) {
+            setToken(data.token)
+            localStorage.setItem('token', data.token)
+            navigate('/')
+        }
+        else {
+            toast.error(data.message)
+        }
+      }
+      catch (error) {
+        toast.error(error.message)
+      }
     }
 
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4 m-auto items-start p-8 py-12 w-80 sm:w-[352px] text-gray-500 rounded-lg shadow-xl border border-gray-200 bg-white">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4 m-auto items-start p-8 py-12 w-80 sm:w-88 text-gray-500 rounded-lg shadow-xl border border-gray-200 bg-white">
             <p className="text-2xl font-medium m-auto">
                 <span className="text-purple-500">User</span> {state === "login" ? "Login" : "Sign Up"}
             </p>
