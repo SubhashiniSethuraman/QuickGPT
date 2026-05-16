@@ -106,7 +106,7 @@ const SideBar = ({isMenuOpen, setIsMenuOpen}) => {
                                 <p className='truncate w-full'>
                                     {chat.messages.length > 0 ? chat.messages[0].content.slice(0,32) : chat.name}
                                 </p>
-                                <p className='text-xs text-gray-500 dark:text-[#B1A6C0]'>{moment(chat.updatedAt).fromNow()}</p>
+                                {/* <p className='text-xs text-gray-500 dark:text-[#B1A6C0]'>{moment(chat.updatedAt).fromNow()}</p> */}
                             </div>
                             <img src={assets.bin_icon} onClick={(e) => handleDeleteChat(e, chat._id)} className='hidden group-hover:block w-4 cursor-pointer not-dark:invert' alt="" />
                         </div>

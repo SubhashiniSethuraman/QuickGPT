@@ -5,7 +5,7 @@ import jwt from 'jsonwebtoken'
 
 //Generate JWT
 const generateToken = (id) => {
-    return jwt.sign({id}, process.env.JWT_SECRET, {
+    return jwt.sign({ id }, process.env.JWT_SECRET, {
         expiresIn: '30d'
     })
 }
@@ -14,36 +14,41 @@ const generateToken = (id) => {
 export const registerUser = async (req, res) => {
     const db = getDB();
 
-    try{
-
-        console.log(req.body)
+    try {
         const { error, value } = userRegisterSchema.validate(req.body);
 
-        if(error) {
-            return res.status(400).json({ message: error.message });
+        if (error) {
+            return res.status(400).json({ success: false, message: error.message });
         }
 
-        const {name, email, password} = value;
+        const { name, email, password } = value;
 
-        const userExists = await db.collection("users").findOne({email})
+        const userExists = await db.collection("users").findOne({ email })
 
-        if(userExists)
-        {
-            return res.json({success: false, message: "User already exists"})
+        if (userExists) {
+            return res.status(409).json({ success: false, message: "User already exists" })
         }
 
         const hashedPassword = await hashPassword(password);
-        const user = await db.collection("users").insertOne({name, email, password: hashedPassword, credits: 20});
+        const user = await db.collection("users").insertOne({ name, email, password: hashedPassword, credits: 20 });
 
         const token = generateToken(user.insertedId)
 
-        return res.json({
+        if (!token) {
+            return res.status(401).json({
+                success: false,
+                message: "Not authorized, no token"
+            });
+        }
+
+        return res.status(201).json({
             success: true,
             token,
             message: "User registered successfully"
-        })
-    } catch(error) {
-        console.log(error?.message)
+        });
+
+    } catch (error) {
+        console.error("Register user error:", error);
         return res.status(500).json({
             success: false,
             message: error.message
@@ -59,35 +64,36 @@ export const loginUser = async (req, res) => {
 
     try {
 
-        const { error, value } =  userLoginSchema.validate(req.body);
+        const { error, value } = userLoginSchema.validate(req.body);
 
-        if( error ) {
-            return res.status(400).json({ message: error.message });
-        } 
+        if (error) {
+            return res.status(400).json({ success: false, message: error.message });
+        }
 
         const { email, password } = value;
 
-        const user = await db.collection("users").findOne({email});
+        const user = await db.collection("users").findOne({ email });
 
-        if(user) {
+        if (user) {
             isMatch = await comparePassword(password, user.password)
         }
 
-        if(isMatch) {
+        if (isMatch) {
             const token = generateToken(user._id);
-            return res.json({
+            return res.status(200).json({
                 success: true,
                 token,
                 message: "User logged in successfully"
-        })
+            })
         }
 
-        return res.json({
+        return res.status(400).json({
             success: false,
             message: "Invalid email or password"
         })
 
-    } catch(error) {
+    } catch (error) {
+        console.error("Login user error:", error);
         return res.status(500).json({
             success: false,
             message: error.message
@@ -96,11 +102,12 @@ export const loginUser = async (req, res) => {
 }
 
 //Get User
-export const getUser =async (req, res) => {
+export const getUser = async (req, res) => {
     try {
         const user = req.user;
-        return res.json({success:true, user})
-    } catch(error) {
+        return res.status(200).json({ success: true, user })
+    } catch (error) {
+        console.error("Get user error:", error);
         return res.status(500).json({
             success: false,
             message: error.message
@@ -109,12 +116,12 @@ export const getUser =async (req, res) => {
 }
 
 //Get Published Images
-export const getPublishedImages = async(req, res) => {
+export const getPublishedImages = async (req, res) => {
     try {
         const db = getDB();
 
         const publishedImageMessages = await db.collection("chats").aggregate([
-            {$unwind: "$messages"},
+            { $unwind: "$messages" },
             {
                 $match: {
                     "messages.isImage": true,
@@ -129,10 +136,11 @@ export const getPublishedImages = async(req, res) => {
                 }
             }
         ]).toArray();
-        
-        res.json({ success: true, images: publishedImageMessages.reverse()})
+
+        return res.status(200).json({ success: true, images: publishedImageMessages.reverse() })
     }
-    catch(error) {
-        res.status(500).json({success: false, message: error.message})
+    catch (error) {
+        console.error("Get published images error:", error);
+        return res.status(500).json({ success: false, message: error.message })
     }
 }

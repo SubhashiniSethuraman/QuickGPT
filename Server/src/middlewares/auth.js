@@ -14,14 +14,14 @@ export const protect = async (req, res, next) => {
 
         const db = getDB();
         //Check the user exist in collection (Original user of ours)
-        const user = await db.collection("users").findOne({ _id: new ObjectId(userId)});
+        const user = await db.collection("users").findOne({ _id: new ObjectId(userId) });
 
         //If not, user not found in our database
-        if(!user) {
+        if (!user) {
             return res.json({
                 success: false,
                 message: "Not authorized, User not found"
-        })
+            })
         }
 
         //Attach user details in middleware itself. So that easy access later in controller
@@ -32,8 +32,8 @@ export const protect = async (req, res, next) => {
 
     } catch (error) {
         return res.status(401).json({
-                success: false,
-                message: "Not authorized, Token failed"
+            success: false,
+            message: "Not authorized, Token failed"
         })
     }
 }

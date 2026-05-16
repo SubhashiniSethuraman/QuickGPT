@@ -1,26 +1,26 @@
 import express from 'express'
 import 'dotenv/config'
 import cors from 'cors'
-import { connectDB } from './configs/db.js'
-import userRouter from './routes/userRoutes.js'
-import chatRouter from './routes/chatRoutes.js'
-import messageRouter from './routes/messageRoutes.js'
-import creditRouter from './routes/creditRoutes.js'
-import { stripeWebhooks } from './controllers/webhook.js'
+import { connectDB } from './src/configs/db.js'
+import userRouter from './src/routes/userRoutes.js'
+import chatRouter from './src/routes/chatRoutes.js'
+import messageRouter from './src/routes/messageRoutes.js'
+import creditRouter from './src/routes/creditRoutes.js'
+import { stripeWebhooks } from './src/controllers/webhook.js'
 
 const app = express()
 
 await connectDB()
 
 //Stripe Webhooks
-app.post('/api/stripe', express.raw({type: 'application/json'}), stripeWebhooks)
+app.post('/api/stripe', express.raw({ type: 'application/json' }), stripeWebhooks)
 
 //Middleware
 app.use(cors())
 app.use(express.json())
 
 //Routes
-app.get('/', (req, res)=> res.send('Server is live'))
+app.get('/', (req, res) => res.send('Server is live'))
 app.use('/api/user', userRouter)
 app.use('/api/chat', chatRouter)
 app.use('/api/message', messageRouter)

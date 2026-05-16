@@ -17,12 +17,12 @@ export const stripeWebhooks = async (req, res) => {
         event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET)
     }
     catch (error) {
-        return res.status(400).json({ success: false, message: `Webhook Error: ${error.message}`})
+        return res.status(400).json({ success: false, message: `Webhook Error: ${error.message}` })
     }
 
     try {
         //event -> type -> payment_intent.succeeded -> "Payment completed successfully"
-        switch(event.type) {
+        switch (event.type) {
             case "payment_intent.succeeded": {
                 //Get payment details from event.data.object
                 const paymentIntent = event.data.object;
@@ -34,12 +34,12 @@ export const stripeWebhooks = async (req, res) => {
                 if (!sessionList.data.length) throw new Error("No session found");
                 //Read Metadata
                 //Used to connect Stripe payment to your DB transaction.
-                const {transactionId, appId} = session.metadata;
+                const { transactionId, appId } = session.metadata;
 
                 const db = getDB();
 
                 //appId in Stripe dashboard and in metadata (compare)
-                if(appId === 'quickgpt') {
+                if (appId === 'quickgpt') {
                     // const transaction = await db.collection("transactions").findOne({ _id: new ObjectId(transactionId), isPaid: false })
 
                     //Update credits in user account in user collection
@@ -49,24 +49,24 @@ export const stripeWebhooks = async (req, res) => {
                     // await db.collection("transactions").updateOne({_id: transaction.userId},{$set: {isPaid: true,updatedAt: new Date()}})
 
                     const transaction = await db.collection("transactions").findOne({
-                    _id: new ObjectId(transactionId),
-                    isPaid: false
+                        _id: new ObjectId(transactionId),
+                        isPaid: false
                     });
 
                     if (!transaction) throw new Error("Transaction not found");
 
                     await db.collection("users").updateOne(
-                    { _id: transaction.userId },
-                    { $inc: { credits: transaction.credits } }
+                        { _id: transaction.userId },
+                        { $inc: { credits: transaction.credits } }
                     );
 
                     await db.collection("transactions").updateOne(
-                    { _id: transaction._id },
-                    { $set: { isPaid: true, updatedAt: new Date() } }
+                        { _id: transaction._id },
+                        { $set: { isPaid: true, updatedAt: new Date() } }
                     );
                 }
                 else {
-                    return res.json({received: true, message: "Ignored event: Invalid app"})
+                    return res.status(200).json({ received: true, message: "Ignored event: Invalid app" })
                 }
                 break;
             }
@@ -74,10 +74,10 @@ export const stripeWebhooks = async (req, res) => {
                 console.log("Unhandled event type:", event.type)
                 break;
         }
-        return res.json({received: true})
+        return res.status(200).json({ received: true })
     }
     catch (error) {
-        console.error("Webhook processing error")
-        res.status(500).json({success: false, message: error.message})
+        console.error("Webhook processing error:", error);
+        return res.status(500).json({ success: false, message: error.message })
     }
 }
