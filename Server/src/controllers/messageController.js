@@ -746,7 +746,9 @@ import { getDB } from "../configs/db.js";
 import { ObjectId } from "mongodb";
 import geminiImage from "../configs/geminiImage.js";
 import huggingface from "../configs/huggingFace.js";
-
+import { POLLINATION_BASE_URL } from "../configs/pollinationAI.js";
+import sarvamClient from "../configs/sarvamAI.js";
+import fs from "fs";
 
 // Text Message Generation with Gemini straightforward (npm install google/genai)
 export const textMessageController = async (req, res) => {
@@ -759,11 +761,13 @@ export const textMessageController = async (req, res) => {
 
         const { chatId, prompt } = req.body;
 
+        const image = req.file;
+
         // Validation
-        if (!chatId || !prompt) {
+        if (!chatId || (!prompt && !image)) {
             return res.status(400).json({
                 success: false,
-                message: "Missing chatId or prompt"
+                message: "Prompt or image required"
             });
         }
 
@@ -796,10 +800,23 @@ export const textMessageController = async (req, res) => {
             });
         }
 
+        // =========================
+        // IMAGE PATH
+        // =========================
+
+        let imagePath = null;
+
+        if (image) {
+
+            imagePath =
+                `${req.protocol}://${req.get("host")}/uploads/${image.filename}`;
+        }
+
         // User message
         const userMessage = {
             role: "user",
             content: prompt,
+            image: imagePath,
             timestamp: Date.now(),
             isImage: false
         };
@@ -816,10 +833,48 @@ export const textMessageController = async (req, res) => {
             }
         );
 
+                // =========================
+        // GEMINI CONTENTS
+        // =========================
+
+        let contents = [];
+
+        // prompt
+        if (prompt) {
+
+            contents.push({
+                text: prompt
+            });
+        }
+
+        // image
+        if (image) {
+
+            const imageBase64 =
+                fs.readFileSync(image.path, {
+                    encoding: "base64"
+                });
+
+            contents.push({
+                inlineData: {
+                    mimeType: image.mimetype,
+                    data: imageBase64
+                }
+            });
+        }
+
+        // only image uploaded
+        if (!prompt && image) {
+
+            contents.unshift({
+                text: "Describe this image in detail"
+            });
+        }
+
         // Generate text using Gemini
         const response = await geminiImage.models.generateContent({
             model: "gemini-3-flash-preview",
-            contents: prompt
+            contents
         });
 
         const text =
@@ -868,7 +923,135 @@ export const textMessageController = async (req, res) => {
     }
 };
 
-// Image Generation with Hugging Face straightforward (npm install huggingface/inference)
+// // Image Generation with Hugging Face straightforward (npm install huggingface/inference)
+// export const imageMessageController = async (req, res) => {
+
+//     try {
+
+//         const db = getDB();
+
+//         const userId = req.user._id;
+
+//         const { prompt, chatId, isPublished } = req.body;
+
+//         // Validation
+//         if (!chatId || !prompt) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "Missing chatId or prompt"
+//             });
+//         }
+
+//         // Validate ObjectId
+//         if (!ObjectId.isValid(chatId)) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "Invalid chatId format"
+//             });
+//         }
+
+//         // Check credits
+//         if (req.user.credits < 2) {
+//             return res.status(403).json({
+//                 success: false,
+//                 message: "You don't have enough credits"
+//             });
+//         }
+
+//         // Find chat
+//         const chat = await db.collection("chats").findOne({
+//             _id: new ObjectId(chatId),
+//             userId
+//         });
+
+//         if (!chat) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "Chat not found"
+//             });
+//         }
+
+//         // User message
+//         const userMessage = {
+//             role: "user",
+//             content: prompt,
+//             timestamp: Date.now(),
+//             isImage: false
+//         };
+
+//         // Save user message
+//         await db.collection("chats").updateOne(
+//             {
+//                 _id: new ObjectId(chatId),
+//                 userId
+//             },
+//             {
+//                 $push: { messages: userMessage },
+//                 $set: { updatedAt: new Date() }
+//             }
+//         );
+
+//         // Generate image using Hugging Face
+//         const imageBlob = await huggingface.textToImage({
+//             // model: "black-forest-labs/FLUX.1-dev",
+//             model: "black-forest-labs/FLUX.1-schnell",
+//             inputs: prompt,
+//             parameters: {
+//                 num_inference_steps: 25
+//             }
+//         });
+
+//         // Convert blob to buffer
+//         const arrayBuffer = await imageBlob.arrayBuffer();
+
+//         const base64Image =
+//             `data:image/png;base64,${Buffer.from(arrayBuffer).toString("base64")}`;
+
+//         // Assistant reply
+//         const reply = {
+//             role: "assistant",
+//             content: base64Image,
+//             timestamp: Date.now(),
+//             isImage: true,
+//             isPublished
+//         };
+
+//         // Save assistant reply
+//         await db.collection("chats").updateOne(
+//             {
+//                 _id: new ObjectId(chatId),
+//                 userId
+//             },
+//             {
+//                 $push: { messages: reply },
+//                 $set: { updatedAt: new Date() }
+//             }
+//         );
+
+//         // Deduct credits
+//         await db.collection("users").updateOne(
+//             { _id: userId },
+//             { $inc: { credits: -2 } }
+//         );
+
+//         // Response
+//         return res.status(200).json({
+//             success: true,
+//             reply
+//         });
+
+//     } catch (error) {
+
+//         console.error("Image generation error:", error);
+
+//         return res.status(500).json({
+//             success: false,
+//             message: error.message
+//         });
+//     }
+// };
+
+
 export const imageMessageController = async (req, res) => {
 
     try {
@@ -877,29 +1060,32 @@ export const imageMessageController = async (req, res) => {
 
         const userId = req.user._id;
 
-        const { prompt, chatId, isPublished } = req.body;
+        const {
+            prompt,
+            chatId,
+            isPublished = false
+        } = req.body;
 
         // Validation
-        if (!chatId || !prompt) {
+        if (!prompt?.trim()) {
             return res.status(400).json({
                 success: false,
-                message: "Missing chatId or prompt"
+                message: "Prompt is required"
             });
         }
 
-        // Validate ObjectId
-        if (!ObjectId.isValid(chatId)) {
+        if (!chatId || !ObjectId.isValid(chatId)) {
             return res.status(400).json({
                 success: false,
-                message: "Invalid chatId format"
+                message: "Invalid chatId"
             });
         }
 
-        // Check credits
+        // Credits check
         if (req.user.credits < 2) {
             return res.status(403).json({
                 success: false,
-                message: "You don't have enough credits"
+                message: "Not enough credits"
             });
         }
 
@@ -919,12 +1105,181 @@ export const imageMessageController = async (req, res) => {
         // User message
         const userMessage = {
             role: "user",
-            content: prompt,
+            content: prompt.trim(),
             timestamp: Date.now(),
             isImage: false
         };
 
         // Save user message
+        await db.collection("chats").updateOne(
+            {
+                _id: new ObjectId(chatId)
+            },
+            {
+                $push: {
+                    messages: userMessage
+                },
+                $set: {
+                    updatedAt: new Date()
+                }
+            }
+        );
+
+        // Generate image
+        const encodedPrompt = encodeURIComponent(prompt.trim());
+
+        const imageUrl =
+            `${POLLINATION_BASE_URL}/${encodedPrompt}`;
+
+        const response = await fetch(imageUrl);
+
+        if (!response.ok) {
+            throw new Error("Failed to generate image");
+        }
+
+        // Convert image to base64
+        const arrayBuffer = await response.arrayBuffer();
+
+        const base64Image =
+            `data:image/png;base64,${Buffer
+                .from(arrayBuffer)
+                .toString("base64")}`;
+
+        // Assistant message
+        const assistantMessage = {
+            role: "assistant",
+            content: base64Image,
+            timestamp: Date.now(),
+            isImage: true,
+            isPublished
+        };
+
+        // Save assistant message
+        await db.collection("chats").updateOne(
+            {
+                _id: new ObjectId(chatId)
+            },
+            {
+                $push: {
+                    messages: assistantMessage
+                },
+                $set: {
+                    updatedAt: new Date()
+                }
+            }
+        );
+
+        // Deduct credits
+        await db.collection("users").updateOne(
+            {
+                _id: userId
+            },
+            {
+                $inc: {
+                    credits: -2
+                }
+            }
+        );
+
+        return res.status(200).json({
+            success: true,
+            reply: assistantMessage
+        });
+
+    } catch (error) {
+
+        console.error("Image generation error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: error.message || "Internal Server Error"
+        });
+    }
+};
+
+
+export const voiceMessageController = async (req, res) => {
+
+    try {
+
+        const db = getDB();
+
+        const userId = req.user._id;
+
+        const chatId = req.headers.chatid;
+
+        const audioBuffer = req.body;
+
+        // Validation
+        if (!chatId || !audioBuffer) {
+            return res.status(400).json({
+                success: false,
+                message: "Missing chatId or audio"
+            });
+        }
+
+        // Validate ObjectId
+        if (!ObjectId.isValid(chatId)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid chatId format"
+            });
+        }
+
+        // Check credits
+        if (req.user.credits < 3) {
+            return res.status(403).json({
+                success: false,
+                message: "You don't have enough credits"
+            });
+        }
+
+        // Find chat
+        const chat = await db.collection("chats").findOne({
+            _id: new ObjectId(chatId),
+            userId
+        });
+
+        if (!chat) {
+            return res.status(404).json({
+                success: false,
+                message: "Chat not found"
+            });
+        }
+
+        // =========================
+        // SARVAM SPEECH TO TEXT
+        // =========================
+
+        const transcriptionResponse =
+            await sarvamClient.speechToText.transcribe({
+                file: audioBuffer,
+                model: "saarika:v2.5",
+                language_code: "unknown"
+            });
+
+        const transcript =
+            transcriptionResponse?.transcript || "";
+
+        if (!transcript) {
+            return res.status(400).json({
+                success: false,
+                message: "Could not transcribe audio"
+            });
+        }
+
+        // =========================
+        // SAVE USER MESSAGE
+        // =========================
+
+        const userMessage = {
+            role: "user",
+            content: transcript,
+            timestamp: Date.now(),
+            isImage: false,
+            isVoice: true
+        };
+
         await db.collection("chats").updateOne(
             {
                 _id: new ObjectId(chatId),
@@ -936,32 +1291,32 @@ export const imageMessageController = async (req, res) => {
             }
         );
 
-        // Generate image using Hugging Face
-        const imageBlob = await huggingface.textToImage({
-            // model: "black-forest-labs/FLUX.1-dev",
-            model: "black-forest-labs/FLUX.1-schnell",
-            inputs: prompt,
-            parameters: {
-                num_inference_steps: 25
-            }
-        });
+        // =========================
+        // GEMINI RESPONSE
+        // =========================
 
-        // Convert blob to buffer
-        const arrayBuffer = await imageBlob.arrayBuffer();
+        const response =
+            await geminiImage.models.generateContent({
+                // model: "gemini-3-flash-preview",
+                model: "gemini-2.5-flash",
+                contents: transcript
+            });
 
-        const base64Image =
-            `data:image/png;base64,${Buffer.from(arrayBuffer).toString("base64")}`;
+        const text =
+            response.candidates?.[0]?.content?.parts?.[0]?.text
+            || "No response generated";
 
-        // Assistant reply
+        // =========================
+        // SAVE ASSISTANT MESSAGE
+        // =========================
+
         const reply = {
             role: "assistant",
-            content: base64Image,
+            content: text,
             timestamp: Date.now(),
-            isImage: true,
-            isPublished
+            isImage: false
         };
 
-        // Save assistant reply
         await db.collection("chats").updateOne(
             {
                 _id: new ObjectId(chatId),
@@ -976,18 +1331,19 @@ export const imageMessageController = async (req, res) => {
         // Deduct credits
         await db.collection("users").updateOne(
             { _id: userId },
-            { $inc: { credits: -2 } }
+            { $inc: { credits: -1 } }
         );
 
-        // Response
+        // Final response
         return res.status(200).json({
             success: true,
+            transcript,
             reply
         });
 
     } catch (error) {
 
-        console.error("Image generation error:", error);
+        console.error("Voice message error:", error);
 
         return res.status(500).json({
             success: false,

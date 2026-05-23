@@ -19,6 +19,8 @@ app.post('/api/stripe', express.raw({ type: 'application/json' }), stripeWebhook
 app.use(cors())
 app.use(express.json())
 
+app.use('/uploads', express.static('uploads'))
+
 //Routes
 app.get('/', (req, res) => res.send('Server is live'))
 app.use('/api/user', userRouter)
