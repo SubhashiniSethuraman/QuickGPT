@@ -41,11 +41,13 @@ export const AppContextProvider = ({ children }) => {
             } else if (res.status === 500) {
                 toast.error("Server Error")
             } else {
-                toast.error(data.message || "Something went wrong");
+                toast.error("Something went wrong");
+                console.error(data.message)
             }
         }
         catch (error) {
-            toast.error(error.message);
+            console.error(error.message)
+            toast.error("Something went wrong");
         }
         finally {
             setLoadingUser(false)
@@ -53,30 +55,33 @@ export const AppContextProvider = ({ children }) => {
     }
 
     const createNewChat = async () => {
-        try {
-            if(!user) return toast("Login to create a new chat")
-            navigate('/')
+        // try {
+        //     if(!user) return toast("Login to create a new chat")
+        //     navigate('/')
             
-            const res = await fetch(`${URL}/api/chat/createChat`, {
-                method: "POST",
-                headers: {
-                    "Content-type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                }
-            })
+        //     const res = await fetch(`${URL}/api/chat/createChat`, {
+        //         method: "POST",
+        //         headers: {
+        //             "Content-type": "application/json",
+        //             "Authorization": `Bearer ${token}`
+        //         }
+        //     })
 
-            const data = await res.json();
+        //     const data = await res.json();
 
-            if(res.status !== 200) {
-                toast.error(data.message)
-            }
+        //     if(res.status !== 200) {
+        //         toast.error(data.message)
+        //     }
             
-            toast.success("Chat created Successfully")
-            await fetchUsersChats()
-        }
-        catch (error) {
-            toast.error(error.message)
-        }
+        //     toast.success("Chat created Successfully")
+        //     await fetchUsersChats()
+        // }
+        // catch (error) {
+        //     toast.error(error.message)
+        // }
+
+        setSelectedChat(null);
+   navigate("/");
     }
 
     const fetchUsersChats = async () => {
@@ -100,11 +105,13 @@ export const AppContextProvider = ({ children }) => {
                     setSelectedChat(data.chats[0]);
                 }
             } else {
-                toast.error(data.message)
+                console.error(data.message)
+                toast.error("Something went wrong")
             }
         }
         catch (error) {
-            toast.error(error.message)
+            toast.error("Something went wrong")
+            console.error(error.message)
         }
     }
 

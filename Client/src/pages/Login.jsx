@@ -36,11 +36,14 @@ const Login = () => {
             navigate('/')
         }
         else {
-            toast.error(data.message)
+            toast.error("Something went wrong")
+            console.error(data.message)
         }
       }
       catch (error) {
-        toast.error(error.message)
+        // toast.error(error.message)
+        toast.error("Something went wrong")
+            console.error(error.message)
       }
     }
 

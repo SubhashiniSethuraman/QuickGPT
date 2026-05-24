@@ -24,14 +24,31 @@ export const createChat = async (req, res) => {
             return res.status(400).json({ success: false, message: error.message });
         }
 
-        const result = await db.collection("chats").insertOne({
-            ...value,
-            userId: new ObjectId(value.userId),
-            createdAt: new Date(),
-            updatedAt: new Date()
-        })
+        // const result = await db.collection("chats").insertOne({
+        //     ...value,
+        //     userId: new ObjectId(value.userId),
+        //     createdAt: new Date(),
+        //     updatedAt: new Date()
+        // })
 
-        return res.status(200).json({ success: true, result });
+        // return res.status(200).json({ success: true, result });
+
+        const newChat = {
+    ...value,
+    userId: new ObjectId(value.userId),
+    createdAt: new Date(),
+    updatedAt: new Date()
+};
+
+const result = await db.collection("chats").insertOne(newChat);
+
+return res.status(200).json({
+    success: true,
+    chat: {
+        _id: result.insertedId,
+        ...newChat
+    }
+});
     }
     catch (error) {
         console.error("Create chat error:", error);

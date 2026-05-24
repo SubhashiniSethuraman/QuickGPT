@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { assets } from '../assets/assets'
 import moment from 'moment'
 import Markdown from 'react-markdown'
@@ -6,7 +6,14 @@ import Prism from 'prismjs'
 import toast from 'react-hot-toast'
 import { Copy, Download, Edit } from 'lucide-react'
 
-const Message = ({ message }) => {
+const Message = ({ message,
+  onEdit,
+  editingMessage,
+  editingText,
+  setEditingText,
+  onSaveEdit }) => {
+
+  const [showTranscript, setShowTranscript] = useState(false);
 
   function formatTime(timestamp) {
     return moment(timestamp).format("hh:mm A");
@@ -33,9 +40,9 @@ const Message = ({ message }) => {
     document.body.removeChild(link);
   }
 
-  function handleEdit(prompt) {
-
-  }
+function handleEdit(message) {
+  onEdit(message);
+}
 
   useEffect(() => {
     Prism.highlightAll()
@@ -55,10 +62,111 @@ const Message = ({ message }) => {
     />
   )}
 
-            <p className='text-sm dark:text-primary'>{message.content}</p>
+            {/* <p className='text-sm dark:text-primary'>{message.content}</p> */}
+            {/* {message.isVoice ? (
+
+  <div className='flex flex-col gap-2'>
+
+    <audio controls className='max-w-xs'>
+      <source src={message.audio} type="audio/webm" />
+    </audio>
+
+    <p className='text-sm dark:text-primary italic'>
+      {message.content}
+    </p>
+
+  </div>
+
+) : ( */}
+
+{message.isVoice ? (
+
+  <div className='flex flex-col gap-2'>
+
+    {/* <audio controls preload='auto' className='max-w-xs' key={message.audio}>
+      <source
+        src={message.audio}
+        type="audio/webm"
+      />
+    </audio> */}
+    <audio
+  controls
+  preload="auto"
+  src={message.audio}
+  className='max-w-xs'
+/>
+
+    <button
+      onClick={() =>
+        setShowTranscript(!showTranscript)
+      }
+      className='text-xs text-blue-500 text-left'
+    >
+      {showTranscript
+        ? "Hide transcript"
+        : "View transcript"}
+    </button>
+
+    {showTranscript && (
+      <p className='text-sm dark:text-primary italic'>
+        {message.content}
+      </p>
+    )}
+
+  </div>
+
+) : (
+
+  // <p className='text-sm dark:text-primary'>
+  //   {message.content}
+  // </p>
+
+  editingMessage?.timestamp === message.timestamp ? (
+
+  <div className='flex flex-col gap-2'>
+
+    <textarea
+      value={editingText}
+      onChange={(e) =>
+        setEditingText(e.target.value)
+      }
+      rows={3}
+      className='text-sm dark:text-primary bg-transparent border border-gray-300 dark:border-[#80609F]/30 rounded-md p-2 outline-none resize-none'
+    />
+
+    <div className='flex justify-end gap-2'>
+
+      <button
+        onClick={() => onSaveEdit(message)}
+        className='text-xs bg-blue-500 text-white px-3 py-1 rounded-md'
+      >
+        Save
+      </button>
+
+    </div>
+
+  </div>
+
+) : (
+
+  <p className='text-sm dark:text-primary'>
+    {message.content}
+  </p>
+
+)
+
+)}
             <div className='flex items-center justify-between mt-0'>
               <span className='text-xs text-gray-400 dark:text-[#B1A6C0]'>{formatTime(message.timestamp)}</span>
-              <button onClick={() => handleEdit(message.content)}><Edit size={14} /></button>
+              {/* <button onClick={() => handleEdit(message.content)}><Edit size={14} /></button> */}
+              {!message.isVoice && !message.image && (
+  <button
+    onClick={() => handleEdit(message)}
+    className='hover:text-blue-500 transition-colors'
+  >
+    <Edit size={14} />
+  </button>
+)}
             </div>
           </div>
           <img src={assets.user_icon} alt="" className='w-8 rounded-full' />

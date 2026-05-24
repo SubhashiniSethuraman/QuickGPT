@@ -7,6 +7,9 @@ import moment from 'moment'
 
 const ChatBox = () => {
 
+  const [editingMessage, setEditingMessage] = useState(null);
+const [editingText, setEditingText] = useState("");
+
   function formatDateSeparator (timestamp) {
     const date = moment(timestamp);
 
@@ -27,7 +30,14 @@ const ChatBox = () => {
 
   const containerRef = useRef(null)
 
-  const { selectedChat, theme, user, token, setUser } = useAppContext()
+  const {selectedChat,
+  setSelectedChat,
+  chats,
+  setChats,
+  theme,
+  user,
+  token,
+  setUser } = useAppContext()
 
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(false)
@@ -90,6 +100,36 @@ const stopRecording = async () => {
 
       setLoading(true);
 
+      let currentChatId = selectedChat?._id;
+
+if (!currentChatId) {
+
+  const createRes = await fetch(
+    `${SERVER_URL}/api/chat/createChat`,
+    {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    }
+  );
+
+  const createData = await createRes.json();
+
+  if (!createRes.ok) {
+    throw new Error(createData.message);
+  }
+
+  currentChatId = createData.chat._id;
+
+  setSelectedChat(createData.chat);
+
+  setChats(prev => [
+    createData.chat,
+    ...prev
+  ]);
+}
+
       // Create audio blob
       const audioBlob = new Blob(
         audioChunksRef.current,
@@ -110,7 +150,7 @@ const stopRecording = async () => {
           headers: {
             "Content-Type": "audio/webm",
             "Authorization": `Bearer ${token}`,
-            "chatid": selectedChat._id
+            "chatid": currentChatId
           },
 
           body: arrayBuffer
@@ -121,12 +161,14 @@ const stopRecording = async () => {
 
       if (res.ok) {
 
+        const audioUrl = URL.createObjectURL(audioBlob);
         // user voice transcript
         setMessages(prev => [
           ...prev,
           {
             role: "user",
             content: data.transcript,
+            audio: audioUrl,
             timestamp: Date.now(),
             isImage: false,
             isVoice: true
@@ -147,7 +189,8 @@ const stopRecording = async () => {
 
       } else {
 
-        toast.error(data.message);
+        toast.error("Something went wrong");
+        console.error(data.message)
       }
 
       setLoading(false);
@@ -157,7 +200,91 @@ const stopRecording = async () => {
 
     setLoading(false);
 
-    toast.error(error.message);
+    toast.error("Something went wrong");
+    console.error(error.message);
+  }
+};
+
+
+const handleSaveEdit = async (message) => {
+
+  try {
+
+    setLoading(true);
+
+    const editIndex = messages.findIndex(
+      msg =>
+        msg.timestamp === message.timestamp
+    );
+
+    if (editIndex === -1) return;
+
+    // remove old user + assistant msgs
+    const updatedMessages =
+      messages.slice(0, editIndex);
+
+    setMessages(updatedMessages);
+
+    // add edited user msg
+    const editedUserMessage = {
+      ...message,
+      content: editingText
+    };
+
+    setMessages(prev => [
+      ...prev,
+      editedUserMessage
+    ]);
+
+    const formData = new FormData();
+
+    formData.append(
+      "chatId",
+      selectedChat._id
+    );
+
+    formData.append(
+      "prompt",
+      editingText
+    );
+
+    const res = await fetch(
+      `${SERVER_URL}/api/message/text`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+        body: formData
+      }
+    );
+
+    const data = await res.json();
+
+    if (res.ok) {
+
+      setMessages(prev => [
+        ...prev,
+        data.reply
+      ]);
+
+      setEditingMessage(null);
+      setEditingText("");
+
+    } else {
+
+      toast.error("Something went wrong");
+      console.error(data.message);
+    }
+
+  } catch (error) {
+
+    toast.error("Something went wrong");
+    console.error(error);
+
+  } finally {
+
+    setLoading(false);
   }
 };
 
@@ -172,6 +299,36 @@ const stopRecording = async () => {
       }
 
       if (mode === "voice") return;
+
+      let currentChatId = selectedChat?._id;
+
+if (!currentChatId) {
+
+  const createRes = await fetch(
+    `${SERVER_URL}/api/chat/createChat`,
+    {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    }
+  );
+
+  const createData = await createRes.json();
+
+  if (!createRes.ok) {
+    throw new Error(createData.message);
+  }
+
+  currentChatId = createData.chat._id;
+
+  setSelectedChat(createData.chat);
+
+  setChats(prev => [
+    createData.chat,
+    ...prev
+  ]);
+}
 
       setLoading(true);
 
@@ -189,6 +346,22 @@ const stopRecording = async () => {
       //     isImage: false
       //   }
       // ]);
+
+      if (editingMessage) {
+
+  const editIndex = messages.findIndex(
+    msg =>
+      msg.timestamp === editingMessage.timestamp
+  );
+
+  if (editIndex !== -1) {
+
+    // remove old user msg + assistant msg
+    setMessages(prev =>
+      prev.slice(0, editIndex)
+    );
+  }
+}
 
       setMessages(prev => [
   ...prev,
@@ -218,7 +391,7 @@ const stopRecording = async () => {
 
       const formData = new FormData();
 
-formData.append("chatId", selectedChat._id);
+formData.append("chatId", currentChatId);
 
 formData.append("prompt", prompt);
 
@@ -239,6 +412,8 @@ const res = await fetch(`${SERVER_URL }/api/message/${mode}`, {
 
         setMessages(prev => [...prev, data.reply]);
         setSelectedImage(null);
+        setEditingMessage(null);
+setEditingText("");
         // decrease credits
         setUser(prev => ({
           ...prev,
@@ -252,15 +427,16 @@ const res = await fetch(`${SERVER_URL }/api/message/${mode}`, {
 
       } else {
 
-        toast.error(data.message);
-
+        toast.error("Something went wrong");
+        console.error(data.message)
         // restore prompt if failed
         setPrompt(promptCopy);
       }
 
     } catch (error) {
 
-      toast.error(error.message);
+      console.error(error.message)
+      toast.error("Something went wrong");
 
     } finally {
 
@@ -269,9 +445,17 @@ const res = await fetch(`${SERVER_URL }/api/message/${mode}`, {
   };
 
   useEffect(() => {
+    setPrompt("");
+
+  setSelectedImage(null);
+  setIsPublished(false);
+  setMode("text");
     if (selectedChat) {
       setMessages(selectedChat.messages)
-    }
+    } else {
+
+    setMessages([]);
+  }
   }, [selectedChat])
 
   //while clicking the chat in sidebar, it smoothly moves to last message of that particular chat
@@ -322,7 +506,27 @@ const res = await fetch(`${SERVER_URL }/api/message/${mode}`, {
               )}
 
               {/* Existing Component */}
-              <Message message={message} />
+              {/* <Message message={message} /> */}
+              {/* <Message
+  message={message}
+  onEdit={(msg) => {
+    setEditingMessage(msg);
+    setEditingText(msg.content);
+    setPrompt(msg.content);
+  }}
+/> */}
+
+<Message
+  message={message}
+  editingMessage={editingMessage}
+  editingText={editingText}
+  setEditingText={setEditingText}
+  onEdit={(msg) => {
+    setEditingMessage(msg);
+    setEditingText(msg.content);
+  }}
+  onSaveEdit={handleSaveEdit}
+/>
 
             </div>
           );
@@ -349,9 +553,23 @@ const res = await fetch(`${SERVER_URL }/api/message/${mode}`, {
         </label>
       )}
 
-      {selectedImage && (
-  <div className='max-w-2xl mx-auto mb-2 text-sm text-gray-500'>
-    Selected: {selectedImage.name}
+     {selectedImage && (
+  <div className='max-w-2xl mx-auto mb-3 relative w-fit'>
+
+    <img
+      src={URL.createObjectURL(selectedImage)}
+      alt=""
+      className='w-20 h-20 object-cover rounded-xl border border-gray-300 dark:border-[#80609F]/30'
+    />
+
+    <button
+      type='button'
+      onClick={() => setSelectedImage(null)}
+      className='absolute -top-2 -right-2 bg-black text-white rounded-full w-5 h-5 text-xs flex items-center justify-center'
+    >
+      ✕
+    </button>
+
   </div>
 )}
 
@@ -382,7 +600,23 @@ const res = await fetch(`${SERVER_URL }/api/message/${mode}`, {
             )}
           </div>
         ) : (
-          <input onChange={(e) => setPrompt(e.target.value)} value={prompt} type='text' placeholder='Type your prompt here...' className='flex-1 w-full text-sm outline-none bg-transparent' required />
+          // <input onChange={(e) => setPrompt(e.target.value)} value={prompt} type='text' placeholder='Type your prompt here...' className='flex-1 w-full text-sm outline-none bg-transparent' required />
+          <textarea
+  onChange={(e) => setPrompt(e.target.value)}
+  value={prompt}
+  placeholder='Type your prompt here...'
+  rows={1}
+  className='flex-1 w-full text-sm outline-none bg-transparent resize-none max-h-32'
+  required
+  onKeyDown={(e) => {
+
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      onSubmit(e);
+    }
+
+  }}
+/>
         )}
 
         <div className='flex items-center gap-2'>
@@ -432,6 +666,10 @@ const res = await fetch(`${SERVER_URL }/api/message/${mode}`, {
           </button>
         </div>
       </form>
+
+      <p className='text-xs text-gray-400 text-center mt-2'>
+  Press Enter to send • Shift + Enter for new line
+</p>
     </div>
   )
 }

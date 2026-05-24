@@ -27,10 +27,12 @@ const Credits = () => {
         setPlans(data.plans)
       }
       else {
-        toast.error(data.message || "Failed to fetch plans")
+        toast.error("Failed to fetch plans")
+        console.error(data.message)
       }
     } catch (error) {
-        toast.error(error.message)
+      toast.error("Something went wrong")
+        console.error(error.message)
     }
     finally {
       setLoading(false)
@@ -87,16 +89,16 @@ const Credits = () => {
       window.location.href = data.url;
 
     } else {
-
-      toast.error(data.message);
+      toast.error("Something went wrong")
+      console.error(data.message);
 
     }
 
   } catch (error) {
 
     toast.dismiss(toastId);
-
-    toast.error(error.message);
+    toast.error("Something went wrong")
+    console.error(error.message);
 
   }
 };

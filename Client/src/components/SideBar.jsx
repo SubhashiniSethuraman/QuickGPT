@@ -48,7 +48,8 @@ const SideBar = ({isMenuOpen, setIsMenuOpen}) => {
         }
         }
         catch(error) {
-            toast.error(error.message)
+            toast.error("Something went wrong")
+            console.error(error.message)
         }
     }
 
@@ -66,9 +67,15 @@ const SideBar = ({isMenuOpen, setIsMenuOpen}) => {
 
     } catch (error) {
 
-        toast.error(error.message, {
-            id: toastId
-        });
+        // toast.error(error.message, {
+        //     id: toastId
+        // });
+
+        console.error(error);
+
+    toast.error("Something went wrong", {
+        id: toastId
+    });
 
     }
 };
