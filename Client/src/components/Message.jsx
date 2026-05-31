@@ -4,24 +4,29 @@ import moment from 'moment'
 import Markdown from 'react-markdown'
 import Prism from 'prismjs'
 import toast from 'react-hot-toast'
-import { Copy, Download, Edit } from 'lucide-react'
+import { Copy, Download, Edit, Bot, User, Check, X } from 'lucide-react'
 
-const Message = ({ message,
+const Message = ({
+  message,
   onEdit,
   editingMessage,
   editingText,
   setEditingText,
-  onSaveEdit }) => {
+  onSaveEdit
+}) => {
 
-  const [showTranscript, setShowTranscript] = useState(false);
+  const [showTranscript, setShowTranscript] = useState(false)
+  const [copied,         setCopied]         = useState(false)
 
   function formatTime(timestamp) {
-    return moment(timestamp).format("hh:mm A");
+    return moment(timestamp).format('hh:mm A')
   }
 
   function handleCopy(text) {
-    navigator.clipboard.writeText(text);
-    toast.success("Copied to clipboard");
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    toast.success('Copied to clipboard')
+    setTimeout(() => setCopied(false), 2000)
   }
 
   function handleDownload(url) {
@@ -42,172 +47,145 @@ const Message = ({ message,
 
 function handleEdit(message) {
   onEdit(message);
-}
+  }
 
   useEffect(() => {
     Prism.highlightAll()
   }, [message.content])
 
-  return (
-    <div>
-      {message.role === "user" ? (
-        <div className='flex items-start justify-end my-4 gap-2'>
-          <div className='flex flex-col gap-2 p-2 px-4 bg-slate-50 dark:bg-[#57317C]/30
-          border border-[#80609F]/30 rounded-md max-w-2xl'>
+  const isUser = message.role === 'user'
+  const isEditing = editingMessage?.timestamp === message.timestamp
+
+  /* ── USER bubble ──────────────────────────────────── */
+  if (isUser) {
+    return (
+      <div className="flex items-end justify-end gap-2.5 my-3">
+        <div className="flex flex-col items-end gap-1 max-w-[78%]">
+
+          {/* Bubble */}
+          <div className="relative group px-4 py-3 rounded-2xl rounded-br-sm bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-500/20">
+
+            {/* Image attachment */}
             {message.image && (
-    <img
-      src={message.image}
-      alt=""
-      className='max-w-xs rounded-lg mb-2'
-    />
-  )}
-
-            {/* <p className='text-sm dark:text-primary'>{message.content}</p> */}
-            {/* {message.isVoice ? (
-
-  <div className='flex flex-col gap-2'>
-
-    <audio controls className='max-w-xs'>
-      <source src={message.audio} type="audio/webm" />
-    </audio>
-
-    <p className='text-sm dark:text-primary italic'>
-      {message.content}
-    </p>
-
-  </div>
-
-) : ( */}
-
-{message.isVoice ? (
-
-  <div className='flex flex-col gap-2'>
-
-    {/* <audio controls preload='auto' className='max-w-xs' key={message.audio}>
-      <source
-        src={message.audio}
-        type="audio/webm"
-      />
-    </audio> */}
-    <audio
-  controls
-  preload="auto"
-  src={message.audio}
-  className='max-w-xs'
-/>
-
-    <button
-      onClick={() =>
-        setShowTranscript(!showTranscript)
-      }
-      className='text-xs text-blue-500 text-left'
-    >
-      {showTranscript
-        ? "Hide transcript"
-        : "View transcript"}
-    </button>
-
-    {showTranscript && (
-      <p className='text-sm dark:text-primary italic'>
-        {message.content}
-      </p>
-    )}
-
-  </div>
-
-) : (
-
-  // <p className='text-sm dark:text-primary'>
-  //   {message.content}
-  // </p>
-
-  editingMessage?.timestamp === message.timestamp ? (
-
-  <div className='flex flex-col gap-2'>
-
-    <textarea
-      value={editingText}
-      onChange={(e) =>
-        setEditingText(e.target.value)
-      }
-      rows={3}
-      className='text-sm dark:text-primary bg-transparent border border-gray-300 dark:border-[#80609F]/30 rounded-md p-2 outline-none resize-none'
-    />
-
-    <div className='flex justify-end gap-2'>
-
-      <button
-        onClick={() => onSaveEdit(message)}
-        className='text-xs bg-blue-500 text-white px-3 py-1 rounded-md'
-      >
-        Save
-      </button>
-
-    </div>
-
-  </div>
-
-) : (
-
-  <p className='text-sm dark:text-primary'>
-    {message.content}
-  </p>
-
-)
-
-)}
-            <div className='flex items-center justify-between mt-0'>
-              <span className='text-xs text-gray-400 dark:text-[#B1A6C0]'>{formatTime(message.timestamp)}</span>
-              {/* <button onClick={() => handleEdit(message.content)}><Edit size={14} /></button> */}
-              {!message.isVoice && !message.image && (
-  <button
-    onClick={() => handleEdit(message)}
-    className='hover:text-blue-500 transition-colors'
-  >
-    <Edit size={14} />
-  </button>
-)}
-            </div>
-          </div>
-          <img src={assets.user_icon} alt="" className='w-8 rounded-full' />
-        </div>
-      )
-        :
-        (
-          <div className='inline-flex flex-col gap-2 p-2 px-4 max-w-2xl bg-primary/20
-        dark:bg-[#57317C]/30 border bordr-[#80609F]/30 rounded-md my-4'>
-            {message.isImage ? (
-              <img src={message.content} alt="" className='w-full max-w-md mt-2 rounded-md' />
-            ) : (
-              //message.content (Markdown text)-> Markdown component-> Converted to HTML (ul, li, h1, p)-> 
-              // .reset-tw removes Tailwind overrides -> Browser default styles apply-> Bullets + spacing + neat formatting
-              //for code and pre -> use prims css file (hardcoded in assets folder) and prismjs (installed)
-              <div>
-                <div className='text-sm dark:text-primary reset-tw'><Markdown>{message.content}</Markdown></div>
-              </div>
+              <img
+                src={message.image}
+                alt=""
+                className="max-w-xs rounded-xl mb-2 border border-white/20"
+              />
             )}
-            <div className='flex items-center justify-between mt-0'>
-              <span className='text-xs text-gray-400 dark:text-[#B1A6C0]'>{formatTime(message.timestamp)}</span>
-              {message.isImage ? (
+
+            {/* Voice message */}
+            {message.isVoice ? (
+              <div className="flex flex-col gap-2">
+                <audio
+                  controls
+                  preload="auto"
+                  src={message.audio}
+                  className="max-w-xs h-8 rounded-md"
+                />
                 <button
-                  onClick={() => handleDownload(message.content)}
-                  className='flex items-center justify-center p-1.5 text-gray-400 hover:text-gray-800 dark:text-[#B1A6C0] dark:hover:text-white transition-colors rounded-md hover:bg-gray-100 dark:hover:bg-[#80609F]/20 cursor-pointer'
-                  title="Download image"
+                  onClick={() => setShowTranscript(!showTranscript)}
+                  className="text-xs text-violet-200 hover:text-white transition-colors text-left"
                 >
-                  <Download size={14} />
+                  {showTranscript ? 'Hide transcript ↑' : 'View transcript ↓'}
                 </button>
-              ) : (
+                {showTranscript && (
+                  <p className="text-sm text-violet-100 italic">{message.content}</p>
+                )}
+              </div>
+            ) : isEditing ? (
+              /* Edit mode */
+              <div className="flex flex-col gap-2 min-w-48">
+                <textarea
+                  value={editingText}
+                  onChange={e => setEditingText(e.target.value)}
+                  rows={3}
+                  className="text-sm text-white bg-white/10 border border-white/25 rounded-xl p-2 outline-none resize-none placeholder:text-violet-200 w-full"
+                />
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => onSaveEdit(message)}
+                    className="flex items-center gap-1.5 text-xs bg-white text-violet-700 font-medium px-3 py-1.5 rounded-lg hover:bg-violet-50 transition-colors"
+                  >
+                    <Check size={12} /> Save
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm leading-relaxed">{message.content}</p>
+            )}
+
+            {/* Action row */}
+            <div className="flex items-center justify-between mt-1.5 gap-3">
+              <span className="text-[10px] text-violet-200/70">{formatTime(message.timestamp)}</span>
+              {!message.isVoice && !message.image && !isEditing && (
                 <button
-                  onClick={() => handleCopy(message.content)}
-                  className='flex items-center justify-center p-1.5 text-gray-400 hover:text-gray-800 dark:text-[#B1A6C0] dark:hover:text-white transition-colors rounded-md hover:bg-gray-100 dark:hover:bg-[#80609F]/20 cursor-pointer'
-                  title="Copy to clipboard"
+                  onClick={() => onEdit(message)}
+                  className="opacity-0 group-hover:opacity-100 p-1 rounded-md hover:bg-white/15 text-violet-200 hover:text-white transition-all"
+                  title="Edit"
                 >
-                  <Copy size={14} />
+                  <Edit size={12} />
                 </button>
               )}
             </div>
           </div>
-        )}
+        </div>
+
+        {/* Avatar */}
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-400 to-slate-600 dark:from-slate-600 dark:to-slate-800 flex items-center justify-center shrink-0 shadow-md">
+          <User size={14} className="text-white" />
+        </div>
+      </div>
+    )
+  }
+
+  /* ── AI bubble ────────────────────────────────────── */
+  return (
+    <div className="flex items-end gap-2.5 my-3">
+      {/* Bot Avatar */}
+      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shrink-0 shadow-md shadow-violet-500/30">
+        <Bot size={14} className="text-white" />
+      </div>
+
+      <div className="flex flex-col items-start gap-1 max-w-[78%]">
+        <div className="relative group px-4 py-3 rounded-2xl rounded-tl-sm dark:bg-white/8 bg-white/80 border border-violet-500/15 shadow-sm">
+
+          {/* Image response */}
+          {message.isImage ? (
+            <img
+              src={message.content}
+              alt=""
+              className="w-full max-w-md rounded-xl border border-violet-500/20"
+            />
+          ) : (
+            <div className="text-sm dark:text-slate-200 text-slate-700 reset-tw leading-relaxed">
+              <Markdown>{message.content}</Markdown>
+            </div>
+          )}
+
+          {/* Action row */}
+          <div className="flex items-center justify-between mt-2 gap-3">
+            <span className="text-[10px] dark:text-slate-500 text-slate-400">{formatTime(message.timestamp)}</span>
+            {message.isImage ? (
+              <button
+                onClick={() => handleDownload(message.content)}
+                className="flex items-center gap-1 text-xs opacity-0 group-hover:opacity-100 px-2 py-1 rounded-lg dark:bg-white/8 bg-black/6 dark:text-slate-400 text-slate-500 dark:hover:text-white hover:text-slate-800 transition-all"
+                title="Download"
+              >
+                <Download size={12} />
+              </button>
+            ) : (
+              <button
+                onClick={() => handleCopy(message.content)}
+                className="flex items-center gap-1 text-xs opacity-0 group-hover:opacity-100 px-2 py-1 rounded-lg dark:bg-white/8 bg-black/6 dark:text-slate-400 text-slate-500 dark:hover:text-white hover:text-slate-800 transition-all"
+                title="Copy"
+              >
+                {copied ? <Check size={12} className="text-violet-400" /> : <Copy size={12} />}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

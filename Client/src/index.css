@@ -1,34 +1,158 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-*{
-    font-family: "Outfit", sans-serif;
+* {
+  font-family: "Inter", sans-serif;
+  box-sizing: border-box;
 }
 
-@theme {
-    --color-primary: #E6CCFF;
+/* ── Design Tokens ─────────────────────────────────────── */
+:root {
+  --accent:        #A855F7;
+  --accent-dim:    #7C3AED;
+  --accent-glow:   rgba(168, 85, 247, 0.35);
+  --glass-bg:      rgba(255, 255, 255, 0.08);
+  --glass-border:  rgba(168, 85, 247, 0.2);
+  --surface:       rgba(255, 255, 255, 0.05);
 }
 
-::-webkit-scrollbar {
-    display: none;
+/* ── Scrollbar ─────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(168, 85, 247, 0.35);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(168, 85, 247, 0.6); }
+
+/* ── Keyframe Animations ───────────────────────────────── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 12px var(--accent-glow); }
+  50%       { box-shadow: 0 0 28px var(--accent-glow), 0 0 48px rgba(168,85,247,0.15); }
+}
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+@keyframes typingBounce {
+  0%, 80%, 100% { transform: translateY(0);    opacity: 0.4; }
+  40%            { transform: translateY(-6px); opacity: 1;   }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes waveBar {
+  0%, 100% { transform: scaleY(0.4); }
+  50%       { transform: scaleY(1.2); }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-8px); }
+}
+@keyframes ripple {
+  0%   { transform: scale(1);   opacity: 0.6; }
+  100% { transform: scale(2.2); opacity: 0;   }
 }
 
-/*Select elements except <pre> and <code> tags
-use default style (revert)*/
+/* ── Utility Classes ───────────────────────────────────── */
+.animate-fadeInUp   { animation: fadeInUp 0.4s ease both; }
+.animate-fadeIn     { animation: fadeIn 0.3s ease both; }
+.animate-slideInLeft{ animation: slideInLeft 0.35s ease both; }
+.animate-pulseGlow  { animation: pulseGlow 2.5s ease-in-out infinite; }
+.animate-float      { animation: float 3s ease-in-out infinite; }
+
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+}
+.glass-strong {
+  background: rgba(255,255,255,0.12);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(168,85,247,0.25);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #A855F7, #6366F1);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.gradient-btn {
+  background: linear-gradient(135deg, #A855F7 0%, #6366F1 100%);
+  transition: all 0.25s ease;
+}
+.gradient-btn:hover {
+  background: linear-gradient(135deg, #9333EA 0%, #4F46E5 100%);
+  box-shadow: 0 4px 20px rgba(168,85,247,0.45);
+  transform: translateY(-1px);
+}
+.gradient-btn:active { transform: translateY(0); }
+
+.shimmer-btn {
+  background: linear-gradient(110deg, #A855F7 0%, #6366F1 40%, #A855F7 60%, #6366F1 100%);
+  background-size: 200% auto;
+  transition: background-position 0.6s ease;
+}
+.shimmer-btn:hover { background-position: right center; }
+
+/* ── Typing Loader ─────────────────────────────────────── */
+.typing-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #A855F7;
+  display: inline-block;
+  animation: typingBounce 1.4s ease-in-out infinite;
+}
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+/* ── Wave Bars (Voice) ─────────────────────────────────── */
+.wave-bar {
+  width: 3px;
+  border-radius: 99px;
+  background: #A855F7;
+  animation: waveBar 0.8s ease-in-out infinite;
+}
+.wave-bar:nth-child(1) { animation-delay: 0.0s; height: 12px; }
+.wave-bar:nth-child(2) { animation-delay: 0.15s; height: 20px; }
+.wave-bar:nth-child(3) { animation-delay: 0.3s;  height: 16px; }
+.wave-bar:nth-child(4) { animation-delay: 0.45s; height: 10px; }
+.wave-bar:nth-child(5) { animation-delay: 0.6s;  height: 18px; }
+
+/* ── Markdown Reset ────────────────────────────────────── */
 .reset-tw :not(pre):not(code) {
-    all: revert;
+  all: revert;
 }
 
-/* chat loader*/
-.loader div:nth-child(2)
-{
-    animation-delay: 0.2s;
-}
-.loader div:nth-child(3)
-{
-    animation-delay: 0.4s;
+/* ── Chat messages enter animation stagger ─────────────── */
+.msg-enter {
+  animation: fadeInUp 0.35s ease both;
 }
 
+/* ── Light mode backgrounds ────────────────────────────── */
+.app-bg {
+  background: linear-gradient(135deg, #F5F0FF 0%, #EDE5FF 50%, #E8D5FF 100%);
+  min-height: 100vh;
+}
+.dark .app-bg {
+  background: linear-gradient(135deg, #0D0B12 0%, #130D1E 50%, #1A1025 100%);
+}

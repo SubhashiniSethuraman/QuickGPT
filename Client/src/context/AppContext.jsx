@@ -28,7 +28,10 @@ export const AppContextProvider = ({ children }) => {
                 }
             })
 
-            if(!res.ok) throw new Error("Request Failed !")
+            if(!res.ok) {
+                const data = await res.json();
+                throw new Error(data.message || "Failed to load user session");
+            }
 
             const data = await res.json();
             if(res.status === 200) {
@@ -41,13 +44,12 @@ export const AppContextProvider = ({ children }) => {
             } else if (res.status === 500) {
                 toast.error("Server Error")
             } else {
-                toast.error("Something went wrong");
+                toast.error(data.message || "Something went wrong");
                 console.error(data.message)
             }
         }
         catch (error) {
             console.error(error.message)
-            toast.error("Something went wrong");
         }
         finally {
             setLoadingUser(false)
@@ -96,7 +98,7 @@ export const AppContextProvider = ({ children }) => {
 
             const data = await res.json();
 
-            if(res.status === 200) {
+            if(res.ok) {
                 setChats(data.chats)
                 if(data.chats.length === 0) {
                     await createNewChat();
@@ -106,11 +108,11 @@ export const AppContextProvider = ({ children }) => {
                 }
             } else {
                 console.error(data.message)
-                toast.error("Something went wrong")
+                toast.error(data.message || "Failed to load conversations")
             }
         }
         catch (error) {
-            toast.error("Something went wrong")
+            toast.error(error.message || "Failed to load conversations")
             console.error(error.message)
         }
     }

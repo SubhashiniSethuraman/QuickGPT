@@ -1,6 +1,6 @@
-import React, {useState} from 'react'
+import React, { useState } from 'react'
 import SideBar from './components/SideBar'
-import {Routes, Route, useLocation} from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import ChatBox from './components/ChatBox'
 import Credits from './pages/Credits'
 import Community from './pages/Community'
@@ -10,93 +10,71 @@ import Loading from './pages/Loading'
 import { useAppContext } from './context/AppContext'
 import Login from './pages/Login'
 import { Toaster } from 'react-hot-toast'
+import { Menu, User } from 'lucide-react'
 
 const App = () => {
 
-  const {user, loadingUser} = useAppContext()
+  const { user, loadingUser, theme } = useAppContext()
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const { pathname } = useLocation()
 
-  const[isMenuOpen, setIsMenuOpen] = useState(false)
-  const {pathname} = useLocation()
-
-  if(pathname === '/loading' || loadingUser)
-    return <Loading/>
-
-  // return (
-  //   <>
-  //   <Toaster/>
-  //   {!isMenuOpen && <img src={assets.menu_icon} className='absolute top-3 left-3 w-8 h-8 cursor-pointer md:hidden not-dark:invert'
-  //   onClick={() => {setIsMenuOpen(true)}} />}
-
-  //   { user ? (
-  //     <div className='dark:bg-linear-to-b from-[#242124] to-[#000000] dark:text-white'>
-  //         <div className='flex h-screen w-screen'>
-  //           <SideBar isMenuOpen={isMenuOpen} setIsMenuOpen={setIsMenuOpen} />
-  //           <Routes>
-  //               {/* <Route path='/' element={<ChatBox />} /> */}
-  //               <Route path="/" element={user ? <ChatBox /> : <Login />} />
-  //               <Route path="/login" element={<Login />} />
-  //               <Route path='/credits' element={<Credits />} />
-  //               <Route path='/community' element={<Community />} />
-  //           </Routes>
-  //         </div>
-  //     </div>
-  //   ) : (
-  //     <div className='bg-linear-to-b from-[#232124] to-[#000000] flex items-center justify-center
-  //     h-screen w-screen'>
-  //       <Login/>
-  //     </div>
-  //   ) }
-      
-  //   </>
-  // )
+  if (pathname === '/loading' || loadingUser)
+    return <Loading />
 
   return (
-  <>
-    <Toaster />
-
-    {!isMenuOpen && user && (
-      <img
-        src={assets.menu_icon}
-        className='absolute top-3 left-3 w-8 h-8 cursor-pointer md:hidden not-dark:invert'
-        onClick={() => setIsMenuOpen(true)}
+    <>
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          style: {
+            background: 'rgba(20, 12, 35, 0.95)',
+            color: '#F5F3FF',
+            border: '1px solid rgba(168,85,247,0.3)',
+            backdropFilter: 'blur(16px)',
+            borderRadius: '12px',
+            fontSize: '14px',
+          },
+          success: { iconTheme: { primary: '#A855F7', secondary: '#F5F3FF' } },
+          error:   { iconTheme: { primary: '#F87171', secondary: '#F5F3FF' } },
+        }}
       />
-    )}
 
-    <div className='dark:bg-linear-to-b from-[#242124] to-[#000000] dark:text-white'>
-      <div className='flex h-screen w-screen'>
-
-        {user && (
-          <SideBar
-            isMenuOpen={isMenuOpen}
-            setIsMenuOpen={setIsMenuOpen}
-          />
+      <div className="app-bg dark:text-white text-slate-800 flex flex-col h-screen w-screen overflow-hidden">
+        {/* Sticky Mobile Header */}
+        {user && pathname !== '/login' && (
+          <header className="md:hidden flex items-center justify-between px-4 py-3 dark:bg-[#0D0B12]/80 bg-white/70 backdrop-blur-md border-b border-violet-500/10 shrink-0 z-30">
+            <button
+              onClick={() => setIsMenuOpen(true)}
+              className="p-1.5 rounded-lg hover:bg-violet-500/10 text-violet-400 cursor-pointer"
+            >
+              <Menu size={20} />
+            </button>
+            <img
+              src={theme === 'dark' ? assets.logo_full : assets.logo_full_dark}
+              alt="QuickGPT"
+              className="h-6 object-contain"
+            />
+            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center shrink-0 shadow-md">
+              <User size={13} className="text-white" />
+            </div>
+          </header>
         )}
 
-        <Routes>
-          {/* Public Route */}
-          <Route path='/login' element={<Login />} />
+        <div className="flex flex-1 min-h-0 overflow-hidden">
+          {user && (
+            <SideBar isMenuOpen={isMenuOpen} setIsMenuOpen={setIsMenuOpen} />
+          )}
 
-          {/* Protected Routes */}
-          <Route
-            path='/'
-            element={user ? <ChatBox /> : <Login />}
-          />
-
-          <Route
-            path='/credits'
-            element={user ? <Credits /> : <Login />}
-          />
-
-          <Route
-            path='/community'
-            element={user ? <Community /> : <Login />}
-          />
-        </Routes>
-
+          <Routes>
+            <Route path="/login"    element={<Login />} />
+            <Route path="/"         element={user ? <ChatBox /> : <Login />} />
+            <Route path="/credits"  element={user ? <Credits />  : <Login />} />
+            <Route path="/community" element={user ? <Community /> : <Login />} />
+          </Routes>
+        </div>
       </div>
-    </div>
-  </>
-)
+    </>
+  )
 }
 
 export default App
